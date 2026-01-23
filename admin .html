@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premux Admin | Seller Hub</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --sidebar-bg: #1e1e2d; --active-color: #3699ff; --bg-body: #f5f8fa; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { display: flex; height: 100vh; background: var(--bg-body); flex-direction: row; }
+
+        /* RESPONSIVE LAYOUT */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { width: 100% !important; flex-direction: row !important; overflow-x: auto; padding: 10px !important; align-items: center; }
+            .brand { margin-bottom: 0 !important; margin-right: 20px; font-size: 18px !important; }
+            .menu-item { white-space: nowrap; padding: 8px 15px !important; font-size: 14px; }
+            .main { padding: 15px !important; }
+            .form-row { flex-direction: column; }
+        }
+
+        /* SIDEBAR */
+        .sidebar { width: 250px; background: var(--sidebar-bg); color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; }
+        .brand { font-size: 24px; font-weight: bold; margin-bottom: 40px; color: white; text-decoration: none; }
+        .brand span { color: #d4af37; }
+        .menu-item { padding: 15px; cursor: pointer; color: #a2a3b7; transition: 0.3s; border-radius: 8px; margin-bottom: 5px; }
+        .menu-item:hover, .menu-item.active { background: #1b1b28; color: white; }
+        
+        /* MAIN */
+        .main { flex: 1; padding: 30px; overflow-y: auto; }
+        .header { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
+
+        /* FORM */
+        .card { background: white; padding: 25px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-bottom: 30px; }
+        .form-group { margin-bottom: 15px; }
+        .form-row { display: flex; gap: 20px; }
+        .form-row .form-group { flex: 1; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        input, select, textarea { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        .btn { padding: 12px 25px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .btn-primary { background: var(--active-color); color: white; width: 100%; }
+        .btn-danger { background: #f64e60; color: white; padding: 5px 10px; font-size: 12px; }
+
+        /* COLOR PICKER UI */
+        .color-manager { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .color-preview-list { display: flex; gap: 10px; flex-wrap: wrap; }
+        .color-chip { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #ddd; position: relative; cursor: pointer; }
+        .color-chip:hover::after { content: '×'; position: absolute; top: -5px; right: -5px; background: red; color: white; width: 15px; height: 15px; font-size: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+
+        /* TABLE */
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 10px; min-width: 600px; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f9f9f9; font-weight: 600; }
+        .prod-img-thumb { width: 50px; height: 50px; object-fit: contain; border: 1px solid #eee; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <a href="#" class="brand">PREMUX <span>Admin</span></a>
+        <div class="menu-item active" onclick="showSection('add')">➕ Add Product</div>
+        <div class="menu-item" onclick="showSection('list')">📦 List</div>
+        <div class="menu-item" onclick="window.location.href='index.html'">🔗 Website</div>
+    </div>
+
+    <div class="main">
+        <!-- ADD PRODUCT -->
+        <div id="section-add">
+            <div class="header">Add New Product</div>
+            <div class="card">
+                <div class="form-group">
+                    <label>Product Name</label>
+                    <input type="text" id="p-name" placeholder="e.g. Royal Sofa Set">
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Price (₹)</label>
+                        <input type="number" id="p-price" placeholder="e.g. 15999">
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select id="p-cat">
+                            <option value="electronics">Electronics</option>
+                            <option value="fashion">Fashion</option>
+                            <option value="furniture">Furniture</option>
+                            <option value="food">Food</option>
+                            <option value="study">Study</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- NEW: MATERIAL TYPE -->
+                <div class="form-group">
+                    <label>Material / Type</label>
+                    <input type="text" id="p-material" placeholder="e.g. Metal, Plastic, 100% Cotton, Alloy">
+                </div>
+
+                <div class="form-group">
+                    <label>Image URL</label>
+                    <input type="text" id="p-img" placeholder="Paste image link...">
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="p-desc" rows="3" placeholder="Enter details..."></textarea>
+                </div>
+
+                <!-- VISUAL COLOR PICKER -->
+                <div class="form-group">
+                    <label>Available Colors</label>
+                    <div class="color-manager">
+                        <input type="color" id="p-color-picker" style="width: 50px; padding: 2px;">
+                        <button type="button" class="btn" style="background:#ddd; padding: 8px 15px;" onclick="addColor()">Add Color</button>
+                    </div>
+                    <div class="color-preview-list" id="color-list"></div>
+                </div>
+
+                <button class="btn btn-primary" onclick="addProduct()">Save Product</button>
+            </div>
+        </div>
+
+        <!-- PRODUCT LIST -->
+        <div id="section-list" style="display:none;">
+            <div class="header">Inventory</div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Img</th><th>Name</th><th>Price</th><th>Material</th><th>Action</th></tr></thead>
+                    <tbody id="product-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createClient } = window.supabase;
+        const SUPABASE_URL = 'https://cauvegnkqyqurkxvtlpb.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_P-IddYTaIg8vdsIt566j9Q_hhW2abND'; 
+        const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let selectedColors = [];
+
+        function addColor() {
+            const color = document.getElementById('p-color-picker').value;
+            if(!selectedColors.includes(color)) {
+                selectedColors.push(color);
+                renderColors();
+            }
+        }
+
+        function removeColor(color) {
+            selectedColors = selectedColors.filter(c => c !== color);
+            renderColors();
+        }
+
+        function renderColors() {
+            const container = document.getElementById('color-list');
+            container.innerHTML = selectedColors.map(c => 
+                `<div class="color-chip" style="background:${c}" onclick="removeColor('${c}')"></div>`
+            ).join('');
+        }
+
+        async function addProduct() {
+            const name = document.getElementById('p-name').value;
+            const price = document.getElementById('p-price').value;
+            const category = document.getElementById('p-cat').value;
+            const material = document.getElementById('p-material').value; // NEW
+            const image = document.getElementById('p-img').value;
+            const desc = document.getElementById('p-desc').value;
+
+            if(!name || !price || !image) { alert("Missing fields!"); return; }
+
+            const { error } = await sb.from('products').insert({
+                name, price, category, image, description: desc, 
+                colors: selectedColors, 
+                material: material // NEW
+            });
+
+            if(error) alert("Error: " + error.message);
+            else {
+                alert("Product Added! ✅");
+                location.reload(); // Refresh to clear form
+            }
+        }
+
+        async function loadProducts() {
+            const tbody = document.getElementById('product-table-body');
+            tbody.innerHTML = '<tr><td colspan="5">Loading...</td></tr>';
+            const { data, error } = await sb.from('products').select('*').order('id', {ascending: false});
+            if(!error) {
+                tbody.innerHTML = data.map(p => `
+                    <tr>
+                        <td><img src="${p.image}" class="prod-img-thumb"></td>
+                        <td>${p.name}</td>
+                        <td>₹${p.price}</td>
+                        <td>${p.material || '-'}</td>
+                        <td><button class="btn btn-danger" onclick="deleteProduct(${p.id})">Delete</button></td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        async function deleteProduct(id) {
+            if(confirm("Delete?")) {
+                await sb.from('products').delete().eq('id', id);
+                loadProducts();
+            }
+        }
+
+        function showSection(section) {
+            document.getElementById('section-add').style.display = section === 'add' ? 'block' : 'none';
+            document.getElementById('section-list').style.display = section === 'list' ? 'block' : 'none';
+            if(section === 'list') loadProducts();
+        }
+    </script>
+</body>
+</html>
