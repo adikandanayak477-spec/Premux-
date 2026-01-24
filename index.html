@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premux | Luxury Shopping</title>
+    <!-- SUPABASE SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- FONTS -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <!-- ICONS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            /* DYNAMIC THEME SYSTEM */
+            --primary: #121212; 
+            --accent: #d4af37; /* Starts Gold, rotates auto */
+            --accent-light: #f3e5ab;
+            
+            --bg-light: #f8f9fa;
+            --white: #ffffff;
+            --text-dark: #212529;
+            --text-muted: #6c757d;
+            --shadow-sm: 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 30px rgba(0,0,0,0.15);
+            --success: #28a745;
+            --danger: #dc3545;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Montserrat', sans-serif; -webkit-tap-highlight-color: transparent; }
+        
+        /* Smooth Color Transition */
+        body, .btn-buy, .logo span, .icon-active, .dot.active {
+            transition: background-color 2s ease, color 2s ease, border-color 2s ease;
+        }
+
+        body { background-color: var(--bg-light); color: var(--text-dark); padding-top: 70px; min-height: 100vh; }
+
+        /* NAVBAR */
+        .navbar {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            height: 70px;
+            display: flex; align-items: center; justify-content: center;
+            position: fixed; top: 0; width: 100%; z-index: 1000;
+            box-shadow: var(--shadow-sm);
+        }
+        .nav-content { width: 100%; max-width: 1200px; display: flex; align-items: center; padding: 0 20px; gap: 20px; }
+        
+        .logo { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: var(--primary); text-decoration: none; letter-spacing: 1px; flex-shrink: 0; }
+        .logo span { color: var(--accent); }
+
+        .search-trigger {
+            flex-grow: 1; background: #f1f3f5; height: 42px; border-radius: 50px;
+            padding: 0 20px; display: flex; align-items: center; color: var(--text-muted);
+            font-size: 14px; cursor: pointer; transition: 0.3s;
+        }
+        .search-trigger:hover { background: #e9ecef; }
+
+        /* SIDEBAR */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1500; opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(3px); }
+        .overlay.active { opacity: 1; pointer-events: auto; }
+
+        .sidebar {
+            position: fixed; top: 0; left: 0; width: 300px; height: 100%;
+            background: var(--white); z-index: 2000;
+            transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            box-shadow: var(--shadow-lg); display: flex; flex-direction: column;
+        }
+        .sidebar.active { transform: translateX(0); }
+
+        .sidebar-header {
+            padding: 30px; background: var(--primary); color: white;
+            display: flex; align-items: center; gap: 15px;
+        }
+        .user-avatar { width: 50px; height: 50px; border-radius: 50%; background: #333; display: flex; align-items: center; justify-content: center; font-size: 20px; border: 2px solid var(--accent); overflow: hidden; }
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .sidebar-menu { padding: 10px 0; overflow-y: auto; }
+        .menu-item { padding: 16px 30px; display: flex; align-items: center; gap: 15px; color: #444; font-weight: 500; cursor: pointer; transition: 0.2s; border-bottom: 1px solid #f9f9f9; }
+        .menu-item:hover { background: #f8f9fa; color: var(--accent); padding-left: 35px; }
+        .menu-item i { width: 25px; text-align: center; }
+
+        /* PRODUCT GRID */
+        .categories { padding: 15px 20px; display: flex; gap: 15px; overflow-x: auto; scrollbar-width: none; background: white; margin-bottom: 2px; }
+        .cat-item { display: flex; flex-direction: column; align-items: center; min-width: 75px; cursor: pointer; opacity: 0.8; transition: 0.3s; }
+        .cat-item:hover { opacity: 1; transform: translateY(-3px); }
+        .cat-icon { font-size: 20px; width: 50px; height: 50px; background: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; color: var(--primary); border: 1px solid #eee; transition: 0.3s; }
+        .cat-item:hover .cat-icon { background: var(--accent); color: white; border-color: var(--accent); }
+
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { background: white; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-sm); transition: 0.3s; cursor: pointer; position: relative; }
+        .card:hover { transform: translateY(-5px); box-shadow: var(--shadow-lg); }
+        
+        .card-img-container { height: 220px; padding: 20px; display: flex; align-items: center; justify-content: center; background: #fff; position: relative; }
+        .card-img { max-width: 100%; max-height: 100%; object-fit: contain; transition: 0.3s; }
+        .card:hover .card-img { transform: scale(1.05); }
+        
+        .card-details { padding: 15px; }
+        .card-title { font-size: 15px; font-weight: 600; margin-bottom: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--primary); }
+        .card-price { font-size: 17px; font-weight: 700; color: var(--primary); }
+        .card-rating { font-size: 12px; background: var(--success); color: white; padding: 2px 8px; border-radius: 4px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; margin-top: 5px; }
+
+        /* PDP */
+        .pdp-container { max-width: 1100px; margin: 30px auto; background: white; border-radius: 16px; box-shadow: var(--shadow-lg); display: flex; overflow: hidden; }
+        .pdp-left { flex: 1; padding: 20px; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid #eee; }
+        
+        /* Carousel */
+        .carousel-wrapper { width: 100%; height: 350px; overflow-x: auto; scroll-snap-type: x mandatory; display: flex; scrollbar-width: none; }
+        .carousel-slide { min-width: 100%; height: 100%; scroll-snap-align: center; display: flex; align-items: center; justify-content: center; }
+        .carousel-img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        
+        .pdp-right { flex: 1.2; padding: 40px; padding-bottom: 100px; } /* Bottom padding for mobile buttons */
+        
+        .info-table { width: 100%; border-collapse: collapse; margin-top: 15px; display: none; animation: fadeIn 0.3s; background: #f9f9f9; border-radius: 8px; overflow: hidden; }
+        .info-table td { padding: 12px 15px; border-bottom: 1px solid #eee; font-size: 14px; }
+        .info-table td:first-child { font-weight: 600; color: #555; width: 40%; background: #f4f4f4; }
+
+        .rating-stars { display: flex; gap: 5px; margin: 15px 0; cursor: pointer; }
+        .rating-stars i { color: #ddd; font-size: 24px; transition: 0.2s; }
+        .rating-stars i.active { color: #ffb400; }
+
+        .btn-toggle-specs { background: none; border: 1px solid var(--accent); color: var(--accent); font-weight: 600; cursor: pointer; padding: 10px 20px; display: inline-flex; align-items: center; gap: 8px; font-size: 14px; border-radius: 50px; margin-top: 15px; transition: 0.3s; }
+        .btn-toggle-specs:hover { background: var(--accent); color: white; }
+
+        /* BUTTONS */
+        .btn-main { padding: 16px; border-radius: 8px; border: none; font-weight: 700; cursor: pointer; width: 100%; font-size: 16px; transition: 0.3s; text-transform: uppercase; letter-spacing: 1px; }
+        .btn-cart { background: white; border: 2px solid var(--primary); color: var(--primary); }
+        .btn-buy { background: var(--btn-grad); background-color: var(--accent); color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+
+        /* MODALS */
+        .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 4000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-box { background: white; width: 90%; max-width: 450px; padding: 30px; border-radius: 16px; box-shadow: var(--shadow-lg); animation: slideUp 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); position: relative; max-height: 85vh; overflow-y: auto; }
+        @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+        .std-input { width: 100%; padding: 14px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 15px; outline: none; transition: 0.3s; }
+        .std-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1); }
+        .std-label { font-size: 13px; font-weight: 600; color: #555; margin-bottom: 5px; display: block; }
+
+        /* CHECKOUT */
+        .qty-box { display: flex; align-items: center; gap: 15px; margin: 15px 0; }
+        .qty-btn { width: 35px; height: 35px; background: #eee; border: none; border-radius: 50%; font-weight: bold; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+        .color-circle { width: 35px; height: 35px; border-radius: 50%; border: 2px solid #ddd; cursor: pointer; transition: transform 0.2s; }
+        .color-circle.selected { border: 3px solid var(--primary); transform: scale(1.15); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .payment-option { padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; }
+        .payment-option.selected { border-color: var(--accent); background: var(--accent-light); color: var(--primary); font-weight: 600; }
+
+        /* ANIMATED SUCCESS */
+        .success-anim { text-align: center; padding: 20px; }
+        .checkmark-circle { width: 80px; height: 80px; position: relative; display: inline-block; vertical-align: top; margin-bottom: 20px; }
+        .checkmark-circle .background { width: 80px; height: 80px; border-radius: 50%; background: var(--success); position: absolute; }
+        .checkmark-circle .checkmark:after { opacity: 1; height: 40px; width: 20px; transform-origin: left top; border-right: 7px solid white; border-top: 7px solid white; content: ''; left: 28px; top: 40px; position: absolute; transform: scaleX(-1) rotate(135deg); }
+
+        /* LIST VIEWS */
+        .list-container { max-width: 800px; margin: 20px auto; padding: 0 20px; }
+        .list-item { background: white; padding: 20px; margin-bottom: 15px; display: flex; gap: 20px; border-radius: 12px; box-shadow: var(--shadow-sm); align-items: center; transition: 0.2s; position: relative; }
+        .list-img { width: 70px; height: 70px; object-fit: contain; border: 1px solid #f0f0f0; border-radius: 4px; }
+        .order-status { font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; background: #e9ecef; display: inline-block; margin-top: 5px; }
+
+        /* SEARCH */
+        #search-page { position: fixed; inset: 0; background: white; z-index: 3000; display: none; flex-direction: column; }
+        .search-header { padding: 20px; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #eee; }
+        .search-input { flex: 1; border: none; font-size: 18px; outline: none; }
+
+        /* UTILS */
+        .view-section { display: none; padding-bottom: 100px; }
+        .active-view { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .back-nav { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: #555; cursor: pointer; margin-bottom: 20px; padding: 8px 15px; background: white; border-radius: 30px; box-shadow: var(--shadow-sm); font-size: 14px; }
+
+        @media (max-width: 768px) {
+            .navbar { height: 55px; }
+            .sidebar { width: 85%; max-width: 320px; }
+            .product-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 10px; }
+            .card-img-container { height: 160px; padding: 10px; }
+            .pdp-container { flex-direction: column; margin: 0; box-shadow: none; border-radius: 0; }
+            .pdp-left { padding: 0; border: none; }
+            .pdp-img { max-height: 320px; }
+            
+            /* Fixed Bottom Bar */
+            .btn-group { position: fixed; bottom: 0; left: 0; width: 100%; background: white; box-shadow: 0 -5px 20px rgba(0,0,0,0.1); z-index: 999; padding: 0; margin: 0; display: flex; gap: 0; }
+            .btn-main { border-radius: 0; padding: 16px 0; font-size: 14px; border: none; flex: 1; }
+            .btn-cart { background: white; color: #333; border-top: 1px solid #eee; }
+            .btn-buy { background: var(--accent); color: white; }
+            .pdp-right { padding-bottom: 80px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- OVERLAYS -->
+    <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header" onclick="openProfileModal()">
+            <div class="user-avatar" id="sidebar-avatar"><i class="fas fa-user"></i></div>
+            <div>
+                <div style="font-weight: 700; font-size: 16px;" id="menu-username">Guest</div>
+                <div style="font-size: 12px; opacity: 0.8;">Sign In</div>
+            </div>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item" id="menu-login-btn" onclick="openLoginModal()"><i class="fas fa-sign-in-alt"></i> Login / Register</div>
+            <div class="menu-item" onclick="openCartView()"><i class="fas fa-shopping-bag"></i> My Cart (<span id="cart-count">0</span>)</div>
+            <div class="menu-item" onclick="openOrdersView()"><i class="fas fa-box-open"></i> Orders</div>
+            <div class="menu-item" onclick="openProfileModal()"><i class="fas fa-user-circle"></i> Profile</div>
+            <div class="menu-item" onclick="openHelpModal()"><i class="fas fa-headset"></i> Help & Support</div>
+            <div class="menu-item" id="menu-logout-btn" onclick="handleLogout()" style="display:none; color: var(--danger);"><i class="fas fa-sign-out-alt"></i> Sign Out</div>
+            <div class="menu-item" onclick="toggleMenu()"><i class="fas fa-times"></i> Close</div>
+        </div>
+    </div>
+
+    <!-- 1. LOGIN MODAL -->
+    <div class="modal-bg" id="login-modal">
+        <div class="modal-box" style="text-align: center;">
+            <span style="float:right; cursor:pointer; font-size:24px;" onclick="closeModals()">&times;</span>
+            <h2 style="margin-bottom: 10px; color: var(--accent);">Welcome</h2>
+            <p style="color: #666; font-size: 13px; margin-bottom: 25px;">Sign in to access your profile and orders.</p>
+            <button class="btn-main btn-buy" onclick="signInWithGoogle()" style="border-radius:4px;">
+                <i class="fab fa-google"></i> Continue with Google
+            </button>
+        </div>
+    </div>
+
+    <!-- 2. PROFILE MODAL -->
+    <div class="modal-bg" id="profile-modal">
+        <div class="modal-box">
+            <span style="float:right; cursor:pointer;" onclick="closeModals()">&times;</span>
+            <h3>Profile</h3>
+            <label class="std-label">Full Name</label><input type="text" id="prof-name" class="std-input" placeholder="Name">
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1"><label class="std-label">Gender</label><select id="prof-gender" class="std-input"><option>Male</option><option>Female</option></select></div>
+                <div style="flex:1"><label class="std-label">Age</label><input type="number" id="prof-age" class="std-input"></div>
+            </div>
+            <label class="std-label">Phone</label><input type="tel" id="prof-phone" class="std-input" placeholder="Primary">
+            <label class="std-label">Alt Phone</label><input type="tel" id="prof-alt" class="std-input" placeholder="Secondary (Optional)">
+            
+            <label class="std-label">Location</label>
+            <select id="prof-location" class="std-input">
+                <option value="">-- Select --</option>
+                <option value="Santarapur">Santarapur</option>
+                <option value="Langalokanti">Langalokanti</option>
+                <option value="Dhenkikoet">Dhenkikoet</option>
+            </select>
+            
+            <label class="std-label">Detail Address</label><textarea id="prof-nearby" class="std-input" rows="2" placeholder="Near landmark..."></textarea>
+            
+            <button class="btn-main btn-buy" style="border-radius:4px;" onclick="saveProfile()">Save Details</button>
+        </div>
+    </div>
+
+    <!-- 3. CONFIG MODAL (Stock/Color) -->
+    <div class="modal-bg" id="config-modal">
+        <div class="modal-box">
+            <span style="float:right; cursor:pointer;" onclick="closeModals()">&times;</span>
+            <h3>Configure</h3>
+            <div style="display:flex; gap:15px; margin:20px 0; border-bottom:1px solid #eee; padding-bottom:15px;">
+                <img id="conf-img" src="" style="width:60px; height:60px; object-fit:contain; border-radius: 8px; border: 1px solid #eee;">
+                <div><div id="conf-name" style="font-weight:700;"></div><div id="conf-base-price" style="color:#666;"></div></div>
+            </div>
+            <div style="margin-bottom:15px;">
+                <label class="std-label">Qty</label>
+                <div style="display:flex; align-items:center; gap:15px;">
+                    <button style="width:35px; height:35px;" onclick="updateQty(-1)">-</button>
+                    <span id="qty-display" style="font-weight:bold;">1</span>
+                    <button style="width:35px; height:35px;" onclick="updateQty(1)">+</button>
+                    <span id="stock-msg" style="color:red; font-size:12px; display:none;">Limit!</span>
+                </div>
+            </div>
+            <div style="margin-bottom:20px;">
+                <label class="std-label">Color</label>
+                <div id="color-options-container" style="display:flex; gap:10px;"></div>
+            </div>
+            <button class="btn-main btn-buy" style="border-radius:4px;" onclick="goToCalculation()">Next</button>
+        </div>
+    </div>
+
+    <!-- 4. CALCULATION MODAL -->
+    <div class="modal-bg" id="calc-modal">
+        <div class="modal-box">
+            <span style="float:right; cursor:pointer;" onclick="closeModals()">&times;</span>
+            <h3>Bill Summary</h3>
+            <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Price</span> <span id="calc-price"></span></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span>Qty</span> <span id="calc-qty-txt"></span></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px; color:green;"><span>Discount</span> <span>- ₹0</span></div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+                    <input type="text" placeholder="Coupon Code" style="padding:5px; border:1px solid #ddd; width:100px;">
+                    <button style="padding:5px 10px; font-size:12px;">Apply</button>
+                </div>
+                <div style="border-top:1px solid #ddd; padding-top:10px; font-weight:700; font-size:16px; display:flex; justify-content:space-between;">
+                    <span>Total</span> <span id="calc-total" style="color:var(--accent);"></span>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <div class="payment-option selected" id="pay-cod" onclick="selectPayment('COD')"><i class="fas fa-money-bill"></i> Cash on Delivery</div>
+                <div class="payment-option" id="pay-online" onclick="selectPayment('ONLINE')"><i class="fas fa-credit-card"></i> Online Pay</div>
+            </div>
+
+            <button class="btn-main btn-buy" style="border-radius:4px;" onclick="openConfirmModal()">Proceed</button>
+        </div>
+    </div>
+
+    <!-- 5. CONFIRMATION MODAL -->
+    <div class="modal-bg" id="confirm-modal">
+        <div class="modal-box">
+            <h3>Confirm Order</h3>
+            <p>Hello <b id="conf-user-name"></b>,</p>
+            <p>Your order for <b><span id="conf-prod-name"></span></b> will arrive on:</p>
+            <h2 style="color:var(--success); margin:15px 0;" id="conf-date"></h2>
+            <div style="font-size:13px; color:#666; margin-bottom:20px;">
+                Location: <span id="conf-loc"></span><br>
+                Total: <span id="conf-total"></span>
+            </div>
+            <button class="btn-main btn-buy" style="border-radius:4px;" onclick="placeOrder()">Confirm Order</button>
+        </div>
+    </div>
+
+    <!-- 6. SUCCESS/CART MODAL -->
+    <div class="modal-bg" id="success-modal">
+        <div class="modal-box success-anim">
+            <div class="checkmark-circle"><div class="background"></div><div class="checkmark draw"></div></div>
+            <h3 id="success-msg">Success!</h3>
+            <button class="btn-main btn-buy" style="border-radius:4px; margin-top:15px;" onclick="closeModals(); goHome()">Continue Shopping</button>
+        </div>
+    </div>
+
+    <!-- HELP MODAL -->
+    <div class="modal-bg" id="help-modal">
+        <div class="modal-box" style="text-align: center;">
+            <span style="float:right; cursor:pointer;" onclick="closeModals()">&times;</span>
+            <h3>Contact Us</h3>
+            <div onclick="window.open('https://youtube.com/@mindblow.trouth?si=0X-umPLypV_ilzJF', '_blank')" style="padding:15px; border-bottom:1px solid #eee; cursor:pointer;">
+                <i class="fab fa-youtube" style="color:red; font-size:24px;"></i> <b>About Us</b>
+            </div>
+            <div onclick="window.open('https://wa.me/916370456051', '_blank')" style="padding:15px; cursor:pointer;">
+                <i class="fab fa-whatsapp" style="color:green; font-size:24px;"></i> <b>Chat Support</b>
+            </div>
+        </div>
+    </div>
+
+    <!-- ORDER DETAIL MODAL -->
+    <div class="modal-bg" id="od-modal">
+        <div class="modal-box">
+            <span style="float:right; cursor:pointer;" onclick="closeModals()">&times;</span>
+            <h3>Order Details</h3>
+            <div id="od-content" style="margin-bottom:20px;"></div>
+            <button id="od-action" class="btn-main" style="border-radius:4px; background:white; color:red; border:1px solid red;"></button>
+        </div>
+    </div>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <div class="nav-content">
+            <div style="font-size:20px; cursor:pointer;" onclick="toggleMenu()"><i class="fas fa-bars"></i></div>
+            <div class="logo" onclick="goHome()">PREMUX<span>.</span></div>
+            <div class="search-trigger" onclick="openSearchPage()">
+                <i class="fas fa-search" style="margin-right:8px; color:#999;"></i> Search...
+            </div>
+            <div style="font-size:20px; cursor:pointer;" onclick="openCartView()"><i class="fas fa-shopping-bag"></i></div>
+        </div>
+    </nav>
+
+    <!-- SEARCH OVERLAY -->
+    <div id="search-page" style="position:fixed; top:0; left:0; width:100%; height:100vh; background:white; z-index:3000; display:none; flex-direction:column;">
+        <div style="display:flex; align-items:center; padding:10px 15px; border-bottom:1px solid #eee;">
+            <i class="fas fa-arrow-left" style="font-size:20px; padding:10px;" onclick="document.getElementById('search-page').style.display='none'"></i>
+            <input type="text" id="searchInput" placeholder="Search by name or 5-digit ID..." onkeyup="handleSearch()" style="flex:1; height:40px; border:none; outline:none; font-size:16px;">
+        </div>
+        <div id="search-results" style="padding:15px; overflow-y:auto;"></div>
+    </div>
+
+    <!-- VIEW: HOME -->
+    <div id="home-view" class="view-section active-view">
+        <div class="categories">
+            <div class="cat-item" onclick="filterCat('all')"><div class="cat-icon"><i class="fas fa-border-all"></i></div>All</div>
+            <div class="cat-item" onclick="filterCat('electronics')"><div class="cat-icon"><i class="fas fa-mobile-alt"></i></div>Tech</div>
+            <div class="cat-item" onclick="filterCat('fashion')"><div class="cat-icon"><i class="fas fa-tshirt"></i></div>Wear</div>
+            <div class="cat-item" onclick="filterCat('beauty')"><div class="cat-icon"><i class="fas fa-magic"></i></div>Beauty</div>
+            <div class="cat-item" onclick="filterCat('home')"><div class="cat-icon"><i class="fas fa-couch"></i></div>Home</div>
+            <div class="cat-item" onclick="filterCat('toys')"><div class="cat-icon"><i class="fas fa-gamepad"></i></div>Toys</div>
+            <div class="cat-item" onclick="filterCat('study')"><div class="cat-icon"><i class="fas fa-book"></i></div>Study</div>
+            <div class="cat-item" onclick="filterCat('others')"><div class="cat-icon"><i class="fas fa-ellipsis-h"></i></div>Other</div>
+        </div>
+        <div class="product-grid" id="main-grid"></div>
+    </div>
+
+    <!-- VIEW: PDP -->
+    <div id="pdp-view" class="view-section">
+        <div class="list-container" style="max-width:1200px;">
+            <div class="back-nav" onclick="goHome()">← Back</div>
+            
+            <div class="pdp-container">
+                <div class="pdp-left">
+                    <div class="carousel-wrapper" id="pdp-carousel"></div>
+                </div>
+                <div class="pdp-right">
+                    <h1 id="detail-title" style="font-family:'Muli'; font-size:22px; font-weight:700;"></h1>
+                    
+                    <div style="display:flex; align-items:center; gap:10px; margin:10px 0;">
+                        <span id="detail-price" style="font-size:24px; font-weight:800; color:#333;"></span>
+                        <span style="font-size:12px; color:#888;">Ratings</span>
+                    </div>
+
+                    <div style="background:#f5f5f5; padding:10px; border-radius:4px; font-size:12px; margin-bottom:15px; display:inline-block;">
+                        <span id="detail-mat"></span> | In Stock
+                    </div>
+
+                    <p id="detail-desc" style="color:#666; font-size:13px; line-height:1.6;"></p>
+
+                    <button class="btn-toggle-specs" onclick="toggleSpecs()">View Specs</button>
+                    <table class="info-table" id="detail-specs"></table>
+
+                    <div style="margin-top:15px;">
+                        <div style="font-size:12px; font-weight:600;">Rate Product:</div>
+                        <div class="rating-stars" id="user-rating-stars">
+                            <i class="fas fa-star" onclick="rateProduct(1)"></i>
+                            <i class="fas fa-star" onclick="rateProduct(2)"></i>
+                            <i class="fas fa-star" onclick="rateProduct(3)"></i>
+                            <i class="fas fa-star" onclick="rateProduct(4)"></i>
+                            <i class="fas fa-star" onclick="rateProduct(5)"></i>
+                        </div>
+                    </div>
+
+                    <div class="btn-group">
+                        <button class="btn-main btn-cart" onclick="addToCart()"><i class="fas fa-shopping-cart"></i> Add</button>
+                        <button class="btn-main btn-buy" onclick="initBuy()"><i class="fas fa-bolt"></i> Buy</button>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top:20px; font-weight:700; font-size:18px; padding-left:10px;">Similar Products</div>
+            <div class="product-grid" id="similar-grid"></div>
+        </div>
+    </div>
+
+    <!-- LIST VIEWS -->
+    <div id="cart-view" class="view-section"><div class="list-container"><div class="back-nav" onclick="goHome()">← Back</div><h3>Shopping Cart</h3><div id="cart-list"></div></div></div>
+    <div id="orders-view" class="view-section"><div class="list-container"><div class="back-nav" onclick="goHome()">← Back</div><h3>My Orders</h3><div id="orders-list"></div></div></div>
+
+    <script>
+        const { createClient } = window.supabase;
+        const sb = createClient('https://cauvegnkqyqurkxvtlpb.supabase.co', 'sb_publishable_P-IddYTaIg8vdsIt566j9Q_hhW2abND');
+        
+        let products=[], cart=[], currentUser=null, userProfile={}, checkoutProduct=null, checkoutQty=1, checkoutColor="Standard", pendingAction=null;
+
+        // AUTO THEME
+        const colors = ['#d4af37', '#9f2089', '#2874f0', '#107c10', '#c50f1f'];
+        let cIdx = 0;
+        setInterval(() => {
+            cIdx = (cIdx+1)%colors.length;
+            document.documentElement.style.setProperty('--accent', colors[cIdx]);
+        }, 180000);
+
+        async function init() {
+            const { data } = await sb.from('products').select('*'); products = data || []; renderGrid(products);
+            const { data: { session } } = await sb.auth.getSession();
+            if(session) { currentUser = session.user; await loadProfile(); updateUserUI(true); updateCartCount(); 
+                if(pendingAction==='buy') initBuy(); if(pendingAction==='cart') addToCart();
+            }
+        }
+
+        // RENDER
+        function renderGrid(items, el='main-grid') {
+            document.getElementById(el).innerHTML = items.map(p => `
+                <div class="card" onclick="openProduct(${p.id})">
+                    <div class="card-img-container"><img src="${p.image}" class="card-img" onerror="this.src='https://via.placeholder.com/200'"></div>
+                    <div class="card-details">
+                        <div class="card-title">${p.name}</div>
+                        <div class="card-price">₹${p.price}</div>
+                        <div style="font-size:11px; color:#888;">Free Delivery</div>
+                    </div>
+                </div>
+            `).join('') || '<p style="padding:20px; text-align:center;">No items.</p>';
+        }
+
+        function openProduct(id) {
+            const p = products.find(x => x.id === id); checkoutProduct = p;
+            document.getElementById('detail-title').innerText = p.name;
+            document.getElementById('detail-price').innerText = "₹"+p.price;
+            document.getElementById('detail-desc').innerText = p.description;
+            document.getElementById('detail-mat').innerText = "Material: " + (p.material || 'Standard');
+            
+            const imgs = p.gallery || [p.image];
+            document.getElementById('pdp-carousel').innerHTML = imgs.map(src=>`<div class="carousel-slide"><img src="${src}" class="carousel-img"></div>`).join('');
+            
+            const specs = p.specifications || [];
+            document.getElementById('detail-specs').innerHTML = specs.map(s => `<tr><td>${s.key}</td><td>${s.val}</td></tr>`).join('');
+            document.querySelector('.btn-toggle-specs').style.display = specs.length ? 'inline-flex' : 'none';
+            document.getElementById('detail-specs').style.display='none';
+
+            renderGrid(products.filter(x => x.category === p.category && x.id !== p.id), 'similar-grid');
+            switchView('pdp-view');
+        }
+
+        function toggleSpecs() { const t=document.getElementById('detail-specs'); t.style.display=t.style.display==='none'?'table':'none'; }
+        async function rateProduct(r) { if(!currentUser) return openLoginModal(); await sb.from('reviews').insert({user_id:currentUser.id, product_id:checkoutProduct.id, rating:r}); alert("Rated "+r+" stars!"); }
+
+        // AUTH & PROFILE
+        async function signInWithGoogle() { await sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.href } }); }
+        async function handleLogout() { await sb.auth.signOut(); location.reload(); }
+        async function loadProfile() {
+            const { data } = await sb.from('profiles').select('*').eq('id', currentUser.id).single();
+            if (data) {
+                userProfile = data;
+                document.getElementById('prof-name').value = data.full_name || '';
+                document.getElementById('prof-phone').value = data.phone || '';
+                document.getElementById('prof-alt-phone').value = data.alt_phone || '';
+                
+                // Parse Location if saved combined
+                const parts = (data.address || "").split(', ');
+                if(parts.length > 1) {
+                    document.getElementById('prof-location').value = parts[0];
+                    document.getElementById('prof-nearby').value = parts.slice(1).join(', ');
+                }
+                
+                if(currentUser.user_metadata.avatar_url) document.getElementById('sidebar-avatar').innerHTML = `<img src="${currentUser.user_metadata.avatar_url}">`;
+            }
+        }
+        function updateUserUI(logged) {
+            document.getElementById('menu-username').innerText = logged ? (userProfile.full_name || "User") : "Guest";
+            document.getElementById('menu-status').innerText = logged ? "Member" : "Sign In";
+            document.getElementById('menu-login-btn').style.display = logged ? 'none' : 'block';
+            document.getElementById('menu-logout-btn').style.display = logged ? 'block' : 'none';
+        }
+        async function saveProfile() {
+            const n=document.getElementById('prof-name').value, p=document.getElementById('prof-phone').value, alt=document.getElementById('prof-alt-phone').value;
+            const loc=document.getElementById('prof-location').value, near=document.getElementById('prof-nearby').value;
+            const age=document.getElementById('prof-age').value, gen=document.getElementById('prof-gender').value;
+            
+            if(!n || !p || !loc) return alert("Fill Name, Phone and Location");
+            
+            const fullAddress = `${loc}, ${near}`;
+            await sb.from('profiles').upsert({ id: currentUser.id, full_name: n, phone: p, alt_phone: alt, address: fullAddress, age: age, gender: gen, updated_at: new Date() });
+            alert("Saved"); await loadProfile(); closeModals();
+            if(pendingAction === 'buy') initBuy();
+        }
+
+        // BUY FLOW (Step-by-Step)
+        function initBuy() {
+            pendingAction = 'buy';
+            if(!currentUser) return openLoginModal();
+            if(!userProfile.phone) return openProfileModal(); // Check basic info present
+            
+            checkoutQty=1; checkoutColor=(checkoutProduct.colors||[])[0] || 'Standard';
+            document.getElementById('conf-name').innerText = checkoutProduct.name;
+            document.getElementById('conf-base-price').innerText = "₹"+checkoutProduct.price;
+            document.getElementById('conf-img').src = checkoutProduct.image;
+            document.getElementById('color-options-container').innerHTML = (checkoutProduct.colors||[]).map((c,i)=>`<div class="color-circle ${i===0?'selected':''}" style="background:${c}" onclick="selCol(this,'${c}')"></div>`).join('') || "Standard";
+            
+            document.getElementById('config-modal').style.display='flex';
+        }
+        
+        function updateQty(n) { 
+            const limit = checkoutProduct.stock || 10;
+            if(checkoutQty+n > limit) { document.getElementById('stock-msg').style.display='block'; return; }
+            if(checkoutQty+n >=1) { checkoutQty+=n; document.getElementById('qty-display').innerText=checkoutQty; document.getElementById('stock-msg').style.display='none'; } 
+        }
+        function selCol(el, c) { document.querySelectorAll('.color-circle').forEach(x=>x.classList.remove('selected')); el.classList.add('selected'); checkoutColor=c; }
+
+        function goToCalculation() {
+            document.getElementById('config-modal').style.display='none';
+            document.getElementById('calc-price').innerText = "₹"+checkoutProduct.price;
+            document.getElementById('calc-qty-txt').innerText = checkoutQty;
+            document.getElementById('calc-total').innerText = "₹"+(checkoutProduct.price*checkoutQty);
+            document.getElementById('calc-modal').style.display='flex';
+        }
+
+        function openConfirmModal() {
+            document.getElementById('calc-modal').style.display='none';
+            document.getElementById('conf-user-name').innerText = userProfile.full_name;
+            document.getElementById('conf-prod-name').innerText = checkoutProduct.name;
+            document.getElementById('conf-loc').innerText = userProfile.address;
+            document.getElementById('conf-total').innerText = "₹"+(checkoutProduct.price*checkoutQty);
+            
+            const d = new Date(); d.setDate(d.getDate() + (7 - d.getDay() + 7) % 7 + 7); // Next Sunday
+            document.getElementById('conf-date').innerText = d.toDateString();
+            document.getElementById('confirm-modal').style.display='flex';
+        }
+
+        async function placeOrder() {
+            await sb.from('orders').insert({
+                user_id: currentUser.id, product_name: checkoutProduct.name, quantity: checkoutQty, 
+                color: checkoutColor, total_price: checkoutProduct.price*checkoutQty, status: 'Confirmed', delivery_date: new Date()
+            });
+            document.getElementById('confirm-modal').style.display='none';
+            document.getElementById('success-msg').innerText = "Order Confirmed!";
+            document.getElementById('order-success-modal').style.display='flex'; // Animation
+            pendingAction = null;
+        }
+
+        // CART FLOW
+        async function addToCart() {
+            pendingAction = 'cart';
+            if(!currentUser) return openLoginModal();
+            await sb.from('cart').insert({ user_id: currentUser.id, product_id: checkoutProduct.id, quantity: 1, color: 'Standard' });
+            updateCartCount();
+            document.getElementById('success-msg').innerText = "Added to Cart!";
+            document.getElementById('cart-success-modal').style.display='flex';
+            pendingAction = null;
+        }
+        async function updateCartCount() {
+            const { count } = await sb.from('cart').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id);
+            document.getElementById('cart-count').innerText = count || 0;
+        }
+
+        // VIEWS & ORDERS
+        async function openCartView() {
+            if(!currentUser) return openLoginModal();
+            switchView('cart-view');
+            const { data } = await sb.from('cart').select('*, products(*)').eq('user_id', currentUser.id);
+            document.getElementById('cart-list').innerHTML = data.length ? data.map(i => `<div class="list-item"><img src="${i.products.image}" class="list-img"><div style="flex:1"><b>${i.products.name}</b><br>₹${i.products.price}</div><i class="fas fa-trash" style="color:red; cursor:pointer;" onclick="removeItem(${i.id})"></i></div>`).join('') : "<p>Empty Cart</p>";
+        }
+        async function removeItem(id) { await sb.from('cart').delete().eq('id', id); openCartView(); updateCartCount(); }
+
+        async function openOrdersView() {
+            if(!currentUser) return openLoginModal();
+            switchView('orders-view');
+            const { data } = await sb.from('orders').select('*').eq('user_id', currentUser.id).order('created_at', {ascending:false});
+            document.getElementById('orders-list').innerHTML = data.length ? data.map(o => `
+                <div class="list-item" style="display:block;">
+                    <div style="display:flex; justify-content:space-between;">
+                        <b>${o.product_name}</b> <span class="order-status">${o.status}</span>
+                    </div>
+                    <div style="font-size:13px; color:#666; margin-top:5px;">Qty: ${o.quantity} | ₹${o.total_price}</div>
+                    <button style="margin-top:10px; padding:5px 10px; border:1px solid #ddd; background:white; width:100%; border-radius:4px;" onclick="viewOrderDetails(${o.id}, '${o.status}')">View Details</button>
+                </div>`).join('') : "<p>No Orders</p>";
+        }
+
+        function viewOrderDetails(id, status) {
+            // Complex Logic: Show Cancel or Return based on Status
+            const btn = document.getElementById('od-action');
+            if(status === 'Delivered') {
+                btn.innerText = "Return Item";
+                btn.onclick = () => window.open('https://wa.me/916370456051?text=Return Order #'+id, '_blank');
+            } else if (status === 'Cancelled') {
+                btn.innerText = "Re-Order";
+                btn.onclick = () => window.open('https://wa.me/916370456051?text=Reorder #'+id, '_blank');
+            } else {
+                btn.innerText = "Cancel Order";
+                btn.onclick = () => window.open('https://wa.me/916370456051?text=Cancel Order #'+id, '_blank');
+            }
+            document.getElementById('od-content').innerText = "Order #"+id + " - " + status;
+            document.getElementById('od-modal').style.display='flex';
+        }
+
+        // UTILS
+        function toggleMenu() { const s=document.getElementById('sidebar'), o=document.getElementById('overlay'); if(s.classList.contains('active')) { s.classList.remove('active'); o.classList.remove('active'); } else { s.classList.add('active'); o.classList.add('active'); } }
+        function switchView(id) { document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active-view')); document.getElementById(id).classList.add('active-view'); window.scrollTo(0,0); }
+        function goHome() { switchView('home-view'); }
+        function openLoginModal() { toggleMenu(); document.getElementById('login-modal').style.display='flex'; }
+        function openProfileModal() { if(!currentUser) return openLoginModal(); toggleMenu(); document.getElementById('profile-modal').style.display='flex'; }
+        function openHelpModal() { toggleMenu(); document.getElementById('help-modal').style.display='flex'; }
+        function closeModals() { document.querySelectorAll('.modal-bg').forEach(m => m.style.display='none'); }
+        function filterCat(c) { renderGrid(c==='all'?products:products.filter(p=>p.category===c)); }
+        function openSearchPage() { document.getElementById('search-page').style.display='flex'; document.getElementById('searchInput').focus(); }
+        function handleSearch() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            if(q.length===5 && !isNaN(q)) { const m=products.find(p=>p.custom_id==q); if(m) { openProduct(m.id); document.getElementById('search-page').style.display='none'; return; } }
+            document.getElementById('search-results').innerHTML = products.filter(p=>p.name.toLowerCase().includes(q)).map(p=>`<div onclick="document.getElementById('search-page').style.display='none';openProduct(${p.id})" style="padding:15px; border-bottom:1px solid #eee;">${p.name}</div>`).join('');
+        }
+        function selectPayment(m) { checkoutPayment=m; document.querySelectorAll('.payment-option').forEach(x=>x.classList.remove('selected')); document.getElementById(m==='COD'?'pay-cod':'pay-online').classList.add('selected'); }
+
+        init();
+    </script>
+</body>
+</html>
